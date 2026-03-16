@@ -1,0 +1,29 @@
+const input = document.getElementById('inputCajaTexto');
+
+input.addEventListener('keydown', function(event) {
+    if(event.key === 'Enter') {
+        const texto = input.value;
+        if(texto.trim() !== '') {
+            alert('Has escrito: ' + texto);
+        }else{
+            alert("Escribe algo primero")
+        }
+    }
+})
+
+const boton = document.getElementById('btnColores');
+const colores= [
+    {fondo: "white", texto: "black"},
+    {fondo: "black", texto: "white"},
+    {fondo: "blue", texto: "red"}
+];
+
+let indiceColor = 0;
+
+boton.addEventListener('click', () =>{
+    indiceColor = (indiceColor + 1) % colores.length;
+    const nuevoEstado = colores[indiceColor];
+
+    document.body.style.backgroundColor = nuevoEstado.fondo;
+    document.body.style.color = nuevoEstado.texto;
+});
