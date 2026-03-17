@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Schobrain - Registro</title>
+    <link rel="stylesheet" href="assets/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Registro de Estudiantes</h1>
+
+      <form id="dataForm">
+        <div class="form-group">
+          <label for="name">Nombre:</label>
+          <input type="text" id="name" required placeholder="Ej: Ana Gómez" />
+        </div>
+        <div class="form-group">
+          <label for="age">Edad:</label>
+          <input type="number" id="age" required placeholder="Ej: 15" />
+        </div>
+        <div class="form-group">
+          <label for="grades">Notas:</label>
+          <input type="text" id="grades" required placeholder="Ej: 8, 9, 10" />
+        </div>
+        <button type="submit">Guardar Datos</button>
+      </form>
+
+      <h2>Lista de Registros</h2>
+      <div id="dataList"></div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
