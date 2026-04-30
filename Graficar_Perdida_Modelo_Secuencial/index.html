@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Predicción con TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Predicción con TensorFlow.js</h1>
+
+    <button id="train-btn" onclick="trainModel()">Entrenar Modelo</button>
+
+    <h2>Gráfica de Pérdida durante el Entrenamiento</h2>
+    <div id="chart-container">
+      <canvas id="lossChart"></canvas>
+    </div>
+    <p id="loss-summary"></p>
+
+    <h2>Predicción</h2>
+    <label>Valores de X (separados por comas):</label>
+    <input type="text" id="x-input" value="10, 20, 25" />
+    <button id="predict-btn" onclick="predict()">Predecir</button>
+
+    <div id="status-box">
+      <div id="status">Estado: Esperando entrenamiento...</div>
+      <div id="results"></div>
+    </div>
+
+    <script>
+      let model = null;
+      let chart = null;
+
+      // Datos de entrenamiento: y = 2x - 1 (aprox)
+      const xTrain = tf.tensor2d(
+        [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        [12, 1],
+      );
+      const yTrain = tf.tensor2d(
+        [-3, -1, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+        [12, 1], // 12 filas 1 columna
+      );
+
+      function initChart() {
+        const ctx = document.getElementById("lossChart").getContext("2d");
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "Pérdida (Loss)",
+                data: [],
+                borderColor: "#4bc8c8",
+                backgroundColor: "rgba(75,200,200,0.1)",
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+              },
+            ],
+          },
+          options: {
+            animation: false,
+            scales: {
+              x: { title: { display: true, text: "Época" } },
+              y: {
+                title: { display: true, text: "Valor de Pérdida" },
+                beginAtZero: true,
+              },
+            },
+            plugins: { legend: { position: "top" } },
+          },
+        });
+      }
+
+      async function trainModel() {
+        document.getElementById("status").textContent = "Estado: Entrenando...";
+        document.getElementById("results").innerHTML = "";
+        document.getElementById("loss-summary").textContent = "";
+
+        model = tf.sequential();
+        model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+        model.compile({ optimizer: "sgd", loss: "meanSquaredError" });
+
+        const lossValues = [];
+        initChart();
+
+        const EPOCHS = 100;
+
+        await model.fit(xTrain, yTrain, {
+          epochs: EPOCHS,
+          callbacks: {
+            onEpochEnd: (epoch, logs) => {
+              lossValues.push(logs.loss);
+              chart.data.labels.push(epoch);
+              chart.data.datasets[0].data.push(
+                parseFloat(logs.loss.toFixed(4)),
+              );
+              chart.update();
+            },
+          },
+        });
+
+        const lossInicial = lossValues[0].toFixed(4);
+        const lossFinal = lossValues[lossValues.length - 1].toFixed(4);
+        const reduccion = (
+          ((lossValues[0] - lossValues[lossValues.length - 1]) /
+            lossValues[0]) *
+          100
+        ).toFixed(2);
+
+        document.getElementById("loss-summary").textContent =
+          `Pérdida inicial: ${lossInicial}, Pérdida final: ${lossFinal} (Reducción: ${reduccion}%)`;
+        document.getElementById("status").textContent =
+          "Estado: Modelo entrenado correctamente";
+      }
+
+      async function predict() {
+        if (!model) {
+          document.getElementById("status").textContent =
+            "Estado: Primero entrena el modelo.";
+          return;
+        }
+
+        const raw = document.getElementById("x-input").value;
+        const valores = raw
+          .split(",")
+          .map((v) => parseFloat(v.trim()))
+          .filter((v) => !isNaN(v));
+
+        if (valores.length === 0) {
+          document.getElementById("status").textContent =
+            "Estado: Ingresa valores válidos.";
+          return;
+        }
+
+        const xTest = tf.tensor2d(valores, [valores.length, 1]);
+        const preds = model.predict(xTest);
+        const resultados = await preds.array();
+
+        let html = '<br><strong>Resultados:</strong><ul id="results">';
+        valores.forEach((x, i) => {
+          html += `<li>Para x = ${x}: y = ${resultados[i][0].toFixed(2)}</li>`;
+        });
+        html += "</ul>";
+
+        document.getElementById("status").textContent =
+          "Estado: Predicción completada";
+        document.getElementById("results").innerHTML = html;
+      }
+    </script>
+  </body>
+</html>
