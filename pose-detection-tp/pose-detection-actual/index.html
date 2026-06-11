@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detection Pose — Dashboard Comparativo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ============================================
+       VARIABLES & RESET
+    ============================================ */
+      :root {
+        --bg: #0a0a0f;
+        --bg2: #121218;
+        --bg3: #1a1a28;
+        --pink: #ff2d78;
+        --pink-glow: #ff2d7880;
+        --magenta: #e040fb;
+        --mag-glow: #e040fb70;
+        --cyan: #00e5ff;
+        --white: #f0e6ff;
+        --grey: #6a607a;
+        --glass: rgba(30, 20, 45, 0.65);
+        --glass-b: rgba(255, 45, 120, 0.08);
+        --radius: 16px;
+        --font-hud: "Share Tech Mono", monospace;
+        --font-ui: "Rajdhani", sans-serif;
+        --font-title: "Orbitron", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--white);
+        font-family: var(--font-ui);
+        min-height: 100vh;
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(
+            ellipse 80% 50% at 50% -20%,
+            rgba(224, 64, 251, 0.18) 0%,
+            transparent 70%
+          ),
+          radial-gradient(
+            ellipse 60% 40% at 80% 100%,
+            rgba(255, 45, 120, 0.12) 0%,
+            transparent 70%
+          );
+      }
+
+      /* ============================================
+       SCANLINE OVERLAY (ambiante hacker)
+    ============================================ */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.18) 2px,
+          rgba(0, 0, 0, 0.18) 4px
+        );
+        pointer-events: none;
+        z-index: 9999;
+      }
+
+      /* ============================================
+       TOPBAR / NAVBAR
+    ============================================ */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 32px;
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(255, 45, 120, 0.25);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .topbar-logo {
+        font-family: var(--font-title);
+        font-size: 1.2rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        color: var(--pink);
+        text-shadow:
+          0 0 12px var(--pink),
+          0 0 28px var(--pink-glow);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .topbar-logo span.emoji {
+        font-size: 1.4rem;
+      }
+
+      .topbar-center {
+        font-family: var(--font-hud);
+        font-size: 0.7rem;
+        color: var(--magenta);
+        text-shadow: 0 0 8px var(--mag-glow);
+        letter-spacing: 0.15em;
+        text-align: center;
+      }
+
+      /* Toggle switch */
+      .model-toggle {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 45, 120, 0.1);
+        border: 1px solid rgba(255, 45, 120, 0.35);
+        border-radius: 50px;
+        padding: 6px 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+      }
+      .model-toggle:hover {
+        background: rgba(255, 45, 120, 0.22);
+        border-color: var(--pink);
+        box-shadow: 0 0 16px var(--pink-glow);
+      }
+      .toggle-label {
+        font-family: var(--font-hud);
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        transition: color 0.3s;
+      }
+      .toggle-label.active {
+        color: var(--pink);
+        text-shadow: 0 0 8px var(--pink);
+      }
+      .toggle-label.inactive {
+        color: var(--grey);
+      }
+
+      .toggle-pill {
+        width: 40px;
+        height: 22px;
+        background: rgba(255, 45, 120, 0.2);
+        border: 1px solid var(--pink);
+        border-radius: 11px;
+        position: relative;
+        transition: background 0.3s;
+      }
+      .toggle-pill::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--pink);
+        top: 2px;
+        left: 2px;
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+        box-shadow: 0 0 8px var(--pink);
+      }
+      .toggle-pill.right::after {
+        transform: translateX(18px);
+      }
+
+      /* ============================================
+       MAIN LAYOUT
+    ============================================ */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 260px 1fr 260px;
+        gap: 20px;
+        padding: 24px 28px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      @media (max-width: 1100px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+        .sidebar-left,
+        .sidebar-right {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 14px;
+        }
+      }
+
+      /* ============================================
+       GLASS CARD
+    ============================================ */
+      .glass-card {
+        background: var(--glass);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 45, 120, 0.2);
+        border-radius: var(--radius);
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+      .glass-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--glass-b);
+        border-radius: inherit;
+        pointer-events: none;
+      }
+      .card-title {
+        font-family: var(--font-hud);
+        font-size: 0.65rem;
+        color: var(--magenta);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-shadow: 0 0 8px var(--mag-glow);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* ============================================
+       CAT FRAME — contenedor de la cámara
+    ============================================ */
+      .camera-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+      }
+
+      /* Orejas SVG encima del marco */
+      .cat-ears {
+        display: flex;
+        justify-content: space-between;
+        width: calc(640px + 20px);
+        max-width: 100%;
+        position: relative;
+        z-index: 2;
+        pointer-events: none;
+      }
+      .cat-ear {
+        width: 60px;
+        height: 52px;
+      }
+
+      .camera-frame {
+        position: relative;
+        width: 640px;
+        max-width: 100%;
+        border: 2px solid var(--pink);
+        border-radius: 12px 12px 18px 18px;
+        box-shadow:
+          0 0 0 1px rgba(255, 45, 120, 0.15),
+          0 0 24px var(--pink-glow),
+          0 0 60px rgba(255, 45, 120, 0.12),
+          inset 0 0 30px rgba(255, 45, 120, 0.06);
+        overflow: hidden;
+        background: #000;
+      }
+
+      #video {
+        display: block;
+        width: 640px;
+        max-width: 100%;
+        height: 480px;
+        object-fit: cover;
+        transform: scaleX(-1); /* espejo */
+      }
+
+      #canvas-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      /* Corner decorations */
+      .camera-frame::before,
+      .camera-frame::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-color: var(--magenta);
+        border-style: solid;
+        z-index: 3;
+      }
+      .camera-frame::before {
+        top: 6px;
+        left: 6px;
+        border-width: 2px 0 0 2px;
+      }
+      .camera-frame::after {
+        bottom: 6px;
+        right: 6px;
+        border-width: 0 2px 2px 0;
+      }
+
+      /* Status badge */
+      .cam-status {
+        position: absolute;
+        bottom: 10px;
+        left: 12px;
+        font-family: var(--font-hud);
+        font-size: 0.6rem;
+        letter-spacing: 0.15em;
+        color: var(--pink);
+        text-shadow: 0 0 8px var(--pink);
+        z-index: 5;
+      }
+      .cam-status::before {
+        content: "● ";
+        animation: blink 1.2s step-end infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .fps-counter {
+        position: absolute;
+        bottom: 10px;
+        right: 12px;
+        font-family: var(--font-hud);
+        font-size: 0.6rem;
+        color: var(--cyan);
+        text-shadow: 0 0 6px var(--cyan);
+        z-index: 5;
+      }
+
+      /* Model badge */
+      .model-badge {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--font-hud);
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+        padding: 3px 12px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid var(--pink);
+        border-radius: 20px;
+        color: var(--pink);
+        text-shadow: 0 0 6px var(--pink);
+        white-space: nowrap;
+        z-index: 5;
+      }
+
+      /* ============================================
+       SIDEBARS
+    ============================================ */
+      .sidebar-left,
+      .sidebar-right {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* Stats metrics */
+      .metric {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .metric-label {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--grey);
+        letter-spacing: 0.15em;
+      }
+      .metric-value {
+        font-family: var(--font-title);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--pink);
+        text-shadow: 0 0 14px var(--pink-glow);
+        line-height: 1;
+      }
+      .metric-unit {
+        font-family: var(--font-hud);
+        font-size: 0.62rem;
+        color: var(--magenta);
+      }
+
+      /* Bar viz */
+      .bar-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .bar-label {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--grey);
+        width: 30px;
+      }
+      .bar-track {
+        flex: 1;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--pink), var(--magenta));
+        border-radius: 3px;
+        box-shadow: 0 0 6px var(--pink-glow);
+        transition: width 0.4s ease;
+        width: 0%;
+      }
+      .bar-val {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--magenta);
+        width: 34px;
+        text-align: right;
+      }
+
+      /* Log terminal */
+      .terminal {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 45, 120, 0.2);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-family: var(--font-hud);
+        font-size: 0.62rem;
+        color: #b08ec0;
+        max-height: 160px;
+        overflow-y: auto;
+        line-height: 1.6;
+      }
+      .terminal p {
+        margin: 0;
+      }
+      .terminal .t-ok {
+        color: var(--pink);
+      }
+      .terminal .t-info {
+        color: var(--cyan);
+      }
+      .terminal .t-warn {
+        color: #ffcc00;
+      }
+      .terminal::-webkit-scrollbar {
+        width: 4px;
+      }
+      .terminal::-webkit-scrollbar-thumb {
+        background: var(--pink-glow);
+        border-radius: 2px;
+      }
+
+      /* Keypoints list */
+      .kp-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .kp-chip {
+        font-family: var(--font-hud);
+        font-size: 0.55rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 45, 120, 0.3);
+        color: var(--grey);
+        background: rgba(255, 45, 120, 0.05);
+        transition: all 0.2s;
+        letter-spacing: 0.05em;
+      }
+      .kp-chip.active {
+        color: var(--pink);
+        border-color: var(--pink);
+        background: rgba(255, 45, 120, 0.18);
+        box-shadow: 0 0 6px var(--pink-glow);
+      }
+
+      /* Compare table */
+      .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .compare-table th,
+      .compare-table td {
+        font-family: var(--font-hud);
+        font-size: 0.6rem;
+        padding: 7px 8px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 45, 120, 0.1);
+      }
+      .compare-table th {
+        color: var(--magenta);
+        letter-spacing: 0.12em;
+      }
+      .compare-table td {
+        color: var(--white);
+      }
+      .compare-table td:first-child {
+        color: var(--grey);
+      }
+      .compare-table tr.highlight td {
+        color: var(--pink);
+      }
+
+      /* Paw decorations */
+      .paw-row {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 4px;
+        opacity: 0.45;
+        font-size: 1rem;
+      }
+
+      /* ============================================
+       LOADING OVERLAY
+    ============================================ */
+      #loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        z-index: 9998;
+        transition: opacity 0.6s ease;
+      }
+      #loading-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .loading-title {
+        font-family: var(--font-title);
+        font-size: 2rem;
+        color: var(--pink);
+        text-shadow:
+          0 0 20px var(--pink),
+          0 0 40px var(--pink-glow);
+        letter-spacing: 0.15em;
+      }
+      .loading-sub {
+        font-family: var(--font-hud);
+        font-size: 0.75rem;
+        color: var(--magenta);
+        letter-spacing: 0.2em;
+      }
+      .loading-bar-track {
+        width: 320px;
+        height: 4px;
+        background: rgba(255, 45, 120, 0.15);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .loading-bar-fill {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--pink),
+          var(--magenta),
+          var(--cyan)
+        );
+        border-radius: 2px;
+        width: 0%;
+        transition: width 0.4s ease;
+        box-shadow: 0 0 12px var(--pink);
+      }
+      #loading-msg {
+        font-family: var(--font-hud);
+        font-size: 0.65rem;
+        color: var(--grey);
+        letter-spacing: 0.1em;
+        min-height: 1rem;
+      }
+
+      /* ============================================
+       ERROR TOAST
+    ============================================ */
+      #error-toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: rgba(20, 5, 15, 0.92);
+        border: 1px solid var(--pink);
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-family: var(--font-hud);
+        font-size: 0.7rem;
+        color: var(--pink);
+        text-shadow: 0 0 8px var(--pink);
+        z-index: 9999;
+        transition: transform 0.4s ease;
+        max-width: 400px;
+        text-align: center;
+      }
+      #error-toast.show {
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* ============================================
+       FLOATING SWITCH BUTTON (alternativa móvil)
+    ============================================ */
+      #fab-switch {
+        display: none;
+        position: fixed;
+        bottom: 28px;
+        right: 24px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--pink);
+        box-shadow:
+          0 0 20px var(--pink),
+          0 0 40px var(--pink-glow);
+        border: none;
+        cursor: pointer;
+        font-size: 1.5rem;
+        z-index: 200;
+        transition: transform 0.2s;
+      }
+      #fab-switch:hover {
+        transform: scale(1.1);
+      }
+      @media (max-width: 1100px) {
+        #fab-switch {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+
+      /* ============================================
+       MODEL INFO BOX (abajo del frame)
+    ============================================ */
+      .model-info-bar {
+        width: 640px;
+        max-width: 100%;
+        margin-top: 12px;
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 45, 120, 0.22);
+        border-radius: 12px;
+        padding: 14px 20px;
+        display: flex;
+        gap: 28px;
+        align-items: flex-start;
+      }
+      .model-info-col {
+        flex: 1;
+      }
+      .model-info-col h4 {
+        font-family: var(--font-hud);
+        font-size: 0.65rem;
+        color: var(--magenta);
+        text-shadow: 0 0 6px var(--mag-glow);
+        letter-spacing: 0.15em;
+        margin-bottom: 6px;
+      }
+      .model-info-col p {
+        font-family: var(--font-ui);
+        font-size: 0.78rem;
+        color: #b0a0c0;
+        line-height: 1.5;
+      }
+      .model-info-col p strong {
+        color: var(--white);
+      }
+
+      /* ============================================
+       CENTER COLUMN
+    ============================================ */
+      .center-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+      <div class="loading-title">🐱Pose-Detection</div>
+      <div class="loading-sub">// INICIALIZANDO MODELOS DE IA //</div>
+      <div class="loading-bar-track">
+        <div class="loading-bar-fill" id="loading-bar"></div>
+      </div>
+      <div id="loading-msg">Cargando TensorFlow.js...</div>
+      <div style="font-size: 1.6rem; opacity: 0.5">🐾 🐾 🐾</div>
+    </div>
+
+    <!-- ERROR TOAST -->
+    <div id="error-toast"></div>
+
+    <!-- TOPBAR -->
+    <nav class="topbar">
+      <div class="topbar-logo">
+        <span class="emoji">🐱</span>
+        NEKO<span style="color: var(--magenta)">AI</span> POSE
+      </div>
+      <div class="topbar-center">
+        COMPARATIVA DE MODELOS · DETECCIÓN DE POSE EN TIEMPO REAL<br />
+        <span style="color: var(--grey)"
+          >TensorFlow.js · WebGL Backend · 640×480</span
+        >
+      </div>
+      <!-- Toggle principal en navbar -->
+      <div class="model-toggle" id="nav-toggle" title="Cambiar modelo">
+        <span class="toggle-label active" id="label-viejo">VIEJO</span>
+        <div class="toggle-pill" id="toggle-pill"></div>
+        <span class="toggle-label inactive" id="label-nuevo">NUEVO</span>
+      </div>
+    </nav>
+
+    <!-- DASHBOARD GRID -->
+    <div class="dashboard">
+      <!-- SIDEBAR IZQUIERDA -->
+      <aside class="sidebar-left">
+        <!-- Métricas en vivo -->
+        <div class="glass-card">
+          <div class="card-title">🐾 métricas en vivo</div>
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <div class="metric">
+              <div class="metric-label">FPS ESTIMADO</div>
+              <div class="metric-value" id="metric-fps">--</div>
+              <div class="metric-unit">frames / seg</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">INFERENCIA</div>
+              <div class="metric-value" id="metric-ms">--</div>
+              <div class="metric-unit">ms por frame</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">KEYPOINTS DETECTADOS</div>
+              <div class="metric-value" id="metric-kp">0</div>
+              <div class="metric-unit">/ 17 puntos (MoveNet)</div>
+            </div>
+          </div>
+          <div class="paw-row">🐾🐾🐾</div>
+        </div>
+
+        <!-- Barras de confianza por región -->
+        <div class="glass-card">
+          <div class="card-title">📊 confianza por región</div>
+          <div id="confidence-bars">
+            <div class="bar-row">
+              <span class="bar-label">CARA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-face"></div>
+              </div>
+              <span class="bar-val" id="bv-face">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">HOMBR</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-shoulder"></div>
+              </div>
+              <span class="bar-val" id="bv-shoulder">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">CODO</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-elbow"></div>
+              </div>
+              <span class="bar-val" id="bv-elbow">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">MANO</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-wrist"></div>
+              </div>
+              <span class="bar-val" id="bv-wrist">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">CADERA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-hip"></div>
+              </div>
+              <span class="bar-val" id="bv-hip">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">RODILLA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-knee"></div>
+              </div>
+              <span class="bar-val" id="bv-knee">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">PIE</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-ankle"></div>
+              </div>
+              <span class="bar-val" id="bv-ankle">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log terminal -->
+        <div class="glass-card">
+          <div class="card-title">🖥 terminal de sistema</div>
+          <div class="terminal" id="terminal-log">
+            <p class="t-info">> Iniciando NekoAI Pose...</p>
+            <p>> Esperando modelos...</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- COLUMNA CENTRAL — CÁMARA -->
+      <main class="center-col">
+        <!-- Orejas de gato SVG -->
+        <div class="cat-ears">
+          <!-- Oreja izquierda -->
+          <svg
+            class="cat-ear"
+            viewBox="0 0 60 52"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polygon
+              points="5,50 55,50 30,2"
+              fill="rgba(255,45,120,0.15)"
+              stroke="#ff2d78"
+              stroke-width="2"
+            />
+            <polygon points="14,46 46,46 30,12" fill="rgba(224,64,251,0.25)" />
+          </svg>
+          <!-- Oreja derecha -->
+          <svg
+            class="cat-ear"
+            viewBox="0 0 60 52"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polygon
+              points="5,50 55,50 30,2"
+              fill="rgba(255,45,120,0.15)"
+              stroke="#ff2d78"
+              stroke-width="2"
+            />
+            <polygon points="14,46 46,46 30,12" fill="rgba(224,64,251,0.25)" />
+          </svg>
+        </div>
+
+        <!-- Marco de la cámara -->
+        <div class="camera-frame">
+          <video
+            id="video"
+            autoplay
+            playsinline
+            muted
+            width="640"
+            height="480"
+          ></video>
+          <canvas id="canvas-overlay" width="640" height="480"></canvas>
+          <div class="cam-status" id="cam-status">LIVE</div>
+          <div class="fps-counter" id="fps-display">0 FPS</div>
+          <div class="model-badge" id="model-badge">🐱 CARGANDO...</div>
+        </div>
+
+        <!-- Info del modelo activo -->
+        <div class="model-info-bar">
+          <div class="model-info-col">
+            <h4>🆕 NUEVO · MoveNet Lightning</h4>
+            <p>
+              Detecta <strong>17 keypoints</strong> por regresión directa sobre
+              el frame completo. Arquitectura liviana (<strong>~2MB</strong>)
+              con backbone MobileNetV2, corre a &gt;30 FPS en WebGL. Retorna
+              coordenadas (x, y) + score de confianza por punto. Dibuja orejas y
+              bigotes de gato sobre los puntos faciales detectados.
+            </p>
+          </div>
+          <div class="model-info-col">
+            <h4>🕰 VIEJO · PoseNet Clásico</h4>
+            <p>
+              El modelo predecesor a MoveNet (2018). Extrae mapas de calor
+              (heatmaps) y vectores de desplazamiento para estimar los mismos
+              <strong>17 keypoints</strong> corporales. Usa una arquitectura
+              MobileNetV1 más antigua. Es un poco más pesado y tiene mayor
+              latencia en movimientos rápidos comparado con la regresión directa
+              de MoveNet.
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <!-- SIDEBAR DERECHA -->
+      <aside class="sidebar-right">
+        <!-- Tabla comparativa -->
+        <div class="glass-card">
+          <div class="card-title">⚡ comparativa técnica</div>
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>PARÁMETRO</th>
+                <th>NUEVO</th>
+                <th>VIEJO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Modelo</td>
+                <td>MoveNet</td>
+                <td>PoseNet</td>
+              </tr>
+              <tr>
+                <td>Año</td>
+                <td>2021</td>
+                <td>2018</td>
+              </tr>
+              <tr>
+                <td>Backbone</td>
+                <td>MobileNetV2</td>
+                <td>MobileNetV1</td>
+              </tr>
+              <tr>
+                <td>Peso</td>
+                <td>~2 MB</td>
+                <td>~5 MB</td>
+              </tr>
+              <tr>
+                <td>Keypoints</td>
+                <td>17</td>
+                <td>17</td>
+              </tr>
+              <tr>
+                <td>Segmentación</td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <td>Método</td>
+                <td>Regresión</td>
+                <td>Heatmaps</td>
+              </tr>
+              <tr class="highlight">
+                <td>FPS típico</td>
+                <td>&gt;30</td>
+                <td>~15–20</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Keypoints activos -->
+        <div class="glass-card">
+          <div class="card-title">🔴 keypoints activos</div>
+          <div class="kp-list" id="kp-list">
+            <!-- Generados por JS -->
+          </div>
+        </div>
+
+        <!-- Modo activo / info -->
+        <div class="glass-card">
+          <div class="card-title">😺 modo activo</div>
+          <div style="text-align: center; padding: 8px 0">
+            <div
+              style="
+                font-family: var(--font-title);
+                font-size: 1rem;
+                color: var(--pink);
+                text-shadow: 0 0 14px var(--pink);
+                letter-spacing: 0.1em;
+              "
+              id="active-model-name"
+            >
+              CARGANDO
+            </div>
+            <div
+              style="
+                font-family: var(--font-hud);
+                font-size: 0.6rem;
+                color: var(--grey);
+                margin-top: 6px;
+                letter-spacing: 0.1em;
+              "
+              id="active-model-sub"
+            >
+              --
+            </div>
+          </div>
+          <div
+            style="
+              margin-top: 14px;
+              font-family: var(--font-hud);
+              font-size: 0.6rem;
+              color: var(--grey);
+              line-height: 1.7;
+            "
+            id="active-model-desc"
+          >
+            Iniciando...
+          </div>
+          <div class="paw-row" style="margin-top: 10px">🐾🐾🐾🐾🐾</div>
+        </div>
+
+        <!-- Leyenda colores esqueleto -->
+        <div class="glass-card">
+          <div class="card-title">🎨 leyenda visual</div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <div
+                style="
+                  width: 20px;
+                  height: 3px;
+                  background: var(--pink);
+                  border-radius: 2px;
+                  box-shadow: 0 0 6px var(--pink);
+                "
+              ></div>
+              <span
+                style="
+                  font-family: var(--font-hud);
+                  font-size: 0.6rem;
+                  color: var(--white);
+                "
+                >Esqueleto torso / brazos</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <div
+                style="
+                  width: 20px;
+                  height: 3px;
+                  background: var(--cyan);
+                  border-radius: 2px;
+                  box-shadow: 0 0 6px var(--cyan);
+                "
+              ></div>
+              <span
+                style="
+                  font-family: var(--font-hud);
+                  font-size: 0.6rem;
+                  color: var(--white);
+                "
+                >Esqueleto piernas</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <div
+                style="
+                  width: 10px;
+                  height: 10px;
+                  border-radius: 50%;
+                  background: var(--magenta);
+                  box-shadow: 0 0 6px var(--magenta);
+                "
+              ></div>
+              <span
+                style="
+                  font-family: var(--font-hud);
+                  font-size: 0.6rem;
+                  color: var(--white);
+                "
+                >Keypoints detectados</span
+              >
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span style="font-size: 0.9rem">🐱</span>
+              <span
+                style="
+                  font-family: var(--font-hud);
+                  font-size: 0.6rem;
+                  color: var(--white);
+                "
+                >Filtro neko (cara)</span
+              >
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- FAB para móvil -->
+    <button id="fab-switch" title="Cambiar modelo">🔄</button>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

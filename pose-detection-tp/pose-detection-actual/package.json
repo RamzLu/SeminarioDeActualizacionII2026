@@ -1,0 +1,19 @@
+{
+  "name": "neko-pose-ai",
+  "version": "1.0.0",
+  "description": "Dashboard comparativo de modelos de detección de pose con temática Girly Hacker + Gatos",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tensorflow/tfjs": "^4.20.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.20.0",
+    "@tensorflow-models/pose-detection": "^2.1.3"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
