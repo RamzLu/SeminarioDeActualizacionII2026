@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Detección de Pose - MediaPipe</title>
+    <title>NekoAI Pose - Standalone</title>
 
     <script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
@@ -18,76 +18,406 @@
       crossorigin="anonymous"
     ></script>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
-      body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
+      :root {
+        --bg: #0a0a0f;
+        --pink: #ff2d78;
+        --pink-glow: #ff2d7880;
+        --magenta: #e040fb;
+        --mag-glow: #e040fb70;
+        --cyan: #00e5ff;
+        --white: #f0e6ff;
+        --grey: #6a607a;
+        --glass: rgba(30, 20, 45, 0.65);
+        --glass-b: rgba(255, 45, 120, 0.08);
+        --radius: 16px;
+        --font-hud: "Share Tech Mono", monospace;
+        --font-ui: "Rajdhani", sans-serif;
+        --font-title: "Orbitron", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
         margin: 0;
-        background: linear-gradient(135deg, #121212 0%, #2a1b2e 100%);
-        color: #ffffff;
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 0;
       }
 
-      .glass-container {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 105, 180, 0.2);
-        border-radius: 24px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px 0 rgba(255, 105, 180, 0.15);
+      body {
+        background: var(--bg);
+        color: var(--white);
+        font-family: var(--font-ui);
+        min-height: 100vh;
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(
+            ellipse 80% 50% at 50% -20%,
+            rgba(224, 64, 251, 0.18) 0%,
+            transparent 70%
+          ),
+          radial-gradient(
+            ellipse 60% 40% at 80% 100%,
+            rgba(255, 45, 120, 0.12) 0%,
+            transparent 70%
+          );
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 9999;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.18) 2px,
+          rgba(0, 0, 0, 0.18) 4px
+        );
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 32px;
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(255, 45, 120, 0.25);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .topbar-logo {
+        font-family: var(--font-title);
+        font-size: 1.2rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        color: var(--cyan);
+        text-shadow: 0 0 12px var(--cyan);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 260px 1fr 260px;
+        gap: 20px;
+        padding: 24px 28px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      @media (max-width: 1100px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .glass-card {
+        background: var(--glass);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        border-radius: var(--radius);
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+      }
+      .card-title {
+        font-family: var(--font-hud);
+        font-size: 0.65rem;
+        color: var(--cyan);
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* Estilos de Cámara y Canvas */
+      .center-col {
         display: flex;
         flex-direction: column;
         align-items: center;
       }
-
-      h2 {
-        margin-top: 0;
-        color: #ffb6c1;
-        letter-spacing: 1px;
-      }
-
-      #status {
-        color: #ff69b4;
-        font-weight: 500;
-        margin-bottom: 1.5rem;
-      }
-
-      .video-wrapper {
+      .camera-frame {
         position: relative;
         width: 640px;
-        height: 480px;
-        border-radius: 16px;
+        max-width: 100%;
+        border: 2px solid var(--cyan);
+        border-radius: 12px;
+        box-shadow:
+          0 0 0 1px rgba(0, 229, 255, 0.15),
+          0 0 24px rgba(0, 229, 255, 0.4);
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        background: #000;
+        margin-top: 10px;
       }
-
-      /* Ocultamos el video real, solo queremos ver el canvas que dibujamos encima */
       #input_video {
         display: none;
       }
-
       #output_canvas {
+        display: block;
+        width: 640px;
+        height: 480px;
+        transform: scaleX(-1);
+      }
+
+      .cam-status {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
+        bottom: 10px;
+        left: 12px;
+        font-family: var(--font-hud);
+        font-size: 0.6rem;
+        letter-spacing: 0.15em;
+        color: var(--cyan);
+        text-shadow: 0 0 8px var(--cyan);
+        z-index: 5;
+      }
+      .fps-counter {
+        position: absolute;
+        bottom: 10px;
+        right: 12px;
+        font-family: var(--font-hud);
+        font-size: 0.6rem;
+        color: var(--cyan);
+        text-shadow: 0 0 6px var(--cyan);
+        z-index: 5;
+      }
+      .model-badge {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--font-hud);
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+        padding: 3px 12px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid var(--cyan);
+        border-radius: 20px;
+        color: var(--cyan);
+        text-shadow: 0 0 6px var(--cyan);
+        z-index: 5;
+      }
+
+      /* Métricas y Barras */
+      .metric {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 10px;
+      }
+      .metric-label {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--grey);
+        letter-spacing: 0.15em;
+      }
+      .metric-value {
+        font-family: var(--font-title);
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--cyan);
+        text-shadow: 0 0 14px rgba(0, 229, 255, 0.5);
+        line-height: 1;
+      }
+
+      .bar-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .bar-label {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--grey);
+        width: 35px;
+      }
+      .bar-track {
+        flex: 1;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .bar-fill {
         height: 100%;
+        background: linear-gradient(90deg, var(--cyan), var(--magenta));
+        border-radius: 3px;
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+        transition: width 0.2s ease;
+        width: 0%;
+      }
+      .bar-val {
+        font-family: var(--font-hud);
+        font-size: 0.58rem;
+        color: var(--magenta);
+        width: 34px;
+        text-align: right;
+      }
+
+      /* Keypoints Chips */
+      .kp-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .kp-chip {
+        font-family: var(--font-hud);
+        font-size: 0.55rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 229, 255, 0.3);
+        color: var(--grey);
+        background: rgba(0, 229, 255, 0.05);
+        transition: all 0.2s;
+        letter-spacing: 0.05em;
+      }
+      .kp-chip.active {
+        color: var(--cyan);
+        border-color: var(--cyan);
+        background: rgba(0, 229, 255, 0.18);
+        box-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+      }
+
+      .terminal {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-family: var(--font-hud);
+        font-size: 0.62rem;
+        color: #b08ec0;
+        max-height: 160px;
+        overflow-y: auto;
+        line-height: 1.6;
+      }
+      .terminal p {
+        margin: 0;
+      }
+      .t-ok {
+        color: var(--cyan);
+      }
+      .t-info {
+        color: var(--pink);
       }
     </style>
   </head>
   <body>
-    <div class="glass-container">
-      <h2>Detección de Pose (MediaPipe)</h2>
-      <p id="status">Cargando la magia visual... dame un segundo.</p>
-
-      <div class="video-wrapper">
-        <video id="input_video" autoplay playsinline></video>
-        <canvas id="output_canvas" width="640" height="480"></canvas>
+    <nav class="topbar">
+      <div class="topbar-logo">
+        ⚙ NEKO<span style="color: var(--magenta)">AI</span> POSE (Standalone)
       </div>
+    </nav>
+
+    <div class="dashboard">
+      <aside class="sidebar-left">
+        <div class="glass-card">
+          <div class="card-title">⚙ métricas en vivo</div>
+          <div class="metric">
+            <div class="metric-label">FPS ESTIMADO</div>
+            <div class="metric-value" id="metric-fps">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">KEYPOINTS DETECTADOS</div>
+            <div class="metric-value" id="metric-kp">0</div>
+            <div class="metric-label" style="font-size: 0.5rem">
+              / 33 puntos (MediaPipe)
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">📊 confianza por región</div>
+          <div id="confidence-bars">
+            <div class="bar-row">
+              <span class="bar-label">CARA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-face"></div>
+              </div>
+              <span class="bar-val" id="bv-face">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">HOMBR</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-shoulder"></div>
+              </div>
+              <span class="bar-val" id="bv-shoulder">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">CODO</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-elbow"></div>
+              </div>
+              <span class="bar-val" id="bv-elbow">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">MANO</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-wrist"></div>
+              </div>
+              <span class="bar-val" id="bv-wrist">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">CADERA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-hip"></div>
+              </div>
+              <span class="bar-val" id="bv-hip">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">RODILLA</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-knee"></div>
+              </div>
+              <span class="bar-val" id="bv-knee">0%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">PIE</span>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-ankle"></div>
+              </div>
+              <span class="bar-val" id="bv-ankle">0%</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="center-col">
+        <div class="camera-frame">
+          <video id="input_video" autoplay playsinline></video>
+          <canvas id="output_canvas" width="640" height="480"></canvas>
+          <div class="cam-status" id="cam-status">INICIANDO...</div>
+          <div class="fps-counter" id="fps-display">0 FPS</div>
+          <div class="model-badge" id="model-badge">⚙ MediaPipe CDN</div>
+        </div>
+      </main>
+
+      <aside class="sidebar-right">
+        <div class="glass-card">
+          <div class="card-title">🖥 terminal de sistema</div>
+          <div class="terminal" id="terminal-log">
+            <p class="t-info">> Booting visual interface...</p>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-title">🔴 keypoints activos</div>
+          <div class="kp-list" id="kp-list"></div>
+        </div>
+      </aside>
     </div>
 
     <script src="main.js"></script>

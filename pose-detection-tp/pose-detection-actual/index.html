@@ -731,11 +731,11 @@
         >
       </div>
       <!-- Toggle principal en navbar -->
-      <div class="model-toggle" id="nav-toggle" title="Cambiar modelo">
+      <!-- <div class="model-toggle" id="nav-toggle" title="Cambiar modelo">
         <span class="toggle-label active" id="label-viejo">VIEJO</span>
         <div class="toggle-pill" id="toggle-pill"></div>
         <span class="toggle-label inactive" id="label-nuevo">NUEVO</span>
-      </div>
+      </div> -->
     </nav>
 
     <!-- DASHBOARD GRID -->
@@ -834,39 +834,6 @@
       <!-- COLUMNA CENTRAL — CÁMARA -->
       <main class="center-col">
         <!-- Orejas de gato SVG -->
-        <div class="cat-ears">
-          <!-- Oreja izquierda -->
-          <svg
-            class="cat-ear"
-            viewBox="0 0 60 52"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <polygon
-              points="5,50 55,50 30,2"
-              fill="rgba(255,45,120,0.15)"
-              stroke="#ff2d78"
-              stroke-width="2"
-            />
-            <polygon points="14,46 46,46 30,12" fill="rgba(224,64,251,0.25)" />
-          </svg>
-          <!-- Oreja derecha -->
-          <svg
-            class="cat-ear"
-            viewBox="0 0 60 52"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <polygon
-              points="5,50 55,50 30,2"
-              fill="rgba(255,45,120,0.15)"
-              stroke="#ff2d78"
-              stroke-width="2"
-            />
-            <polygon points="14,46 46,46 30,12" fill="rgba(224,64,251,0.25)" />
-          </svg>
-        </div>
-
         <!-- Marco de la cámara -->
         <div class="camera-frame">
           <video
@@ -884,88 +851,11 @@
         </div>
 
         <!-- Info del modelo activo -->
-        <div class="model-info-bar">
-          <div class="model-info-col">
-            <h4>🆕 NUEVO · MoveNet Lightning</h4>
-            <p>
-              Detecta <strong>17 keypoints</strong> por regresión directa sobre
-              el frame completo. Arquitectura liviana (<strong>~2MB</strong>)
-              con backbone MobileNetV2, corre a &gt;30 FPS en WebGL. Retorna
-              coordenadas (x, y) + score de confianza por punto. Dibuja orejas y
-              bigotes de gato sobre los puntos faciales detectados.
-            </p>
-          </div>
-          <div class="model-info-col">
-            <h4>🕰 VIEJO · PoseNet Clásico</h4>
-            <p>
-              El modelo predecesor a MoveNet (2018). Extrae mapas de calor
-              (heatmaps) y vectores de desplazamiento para estimar los mismos
-              <strong>17 keypoints</strong> corporales. Usa una arquitectura
-              MobileNetV1 más antigua. Es un poco más pesado y tiene mayor
-              latencia en movimientos rápidos comparado con la regresión directa
-              de MoveNet.
-            </p>
-          </div>
-        </div>
       </main>
 
       <!-- SIDEBAR DERECHA -->
       <aside class="sidebar-right">
         <!-- Tabla comparativa -->
-        <div class="glass-card">
-          <div class="card-title">⚡ comparativa técnica</div>
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th>PARÁMETRO</th>
-                <th>NUEVO</th>
-                <th>VIEJO</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Modelo</td>
-                <td>MoveNet</td>
-                <td>PoseNet</td>
-              </tr>
-              <tr>
-                <td>Año</td>
-                <td>2021</td>
-                <td>2018</td>
-              </tr>
-              <tr>
-                <td>Backbone</td>
-                <td>MobileNetV2</td>
-                <td>MobileNetV1</td>
-              </tr>
-              <tr>
-                <td>Peso</td>
-                <td>~2 MB</td>
-                <td>~5 MB</td>
-              </tr>
-              <tr>
-                <td>Keypoints</td>
-                <td>17</td>
-                <td>17</td>
-              </tr>
-              <tr>
-                <td>Segmentación</td>
-                <td>No</td>
-                <td>No</td>
-              </tr>
-              <tr>
-                <td>Método</td>
-                <td>Regresión</td>
-                <td>Heatmaps</td>
-              </tr>
-              <tr class="highlight">
-                <td>FPS típico</td>
-                <td>&gt;30</td>
-                <td>~15–20</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
 
         <!-- Keypoints activos -->
         <div class="glass-card">
@@ -1080,24 +970,12 @@
                 >Keypoints detectados</span
               >
             </div>
-            <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 0.9rem">🐱</span>
-              <span
-                style="
-                  font-family: var(--font-hud);
-                  font-size: 0.6rem;
-                  color: var(--white);
-                "
-                >Filtro neko (cara)</span
-              >
-            </div>
           </div>
         </div>
       </aside>
     </div>
 
     <!-- FAB para móvil -->
-    <button id="fab-switch" title="Cambiar modelo">🔄</button>
 
     <script type="module" src="./main.js"></script>
   </body>

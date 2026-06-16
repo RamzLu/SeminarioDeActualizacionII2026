@@ -1,7 +1,7 @@
 /**
  * ============================================================
  * NekoAI Pose — main.js
- * Comparativa: MoveNet (2021) vs PoseNet (2018)
+ * Standalone: MoveNet Lightning (17 Keypoints)
  * ============================================================
  */
 
@@ -52,16 +52,13 @@ const COLOR_UPPER = "#ff2d78";
 const COLOR_LOWER = "#00e5ff";
 const COLOR_KP = "#e040fb";
 
-let activeModel = "new";
 let moveNetDetector = null;
-let poseNetDetector = null; // Reemplazamos bodyPixNet por poseNetDetector
 let videoStream = null;
 let animFrameId = null;
 let isRunning = false;
 let lastFrameTime = performance.now();
 let frameCount = 0;
 let fpsSmoothed = 0;
-let modelsReady = { new: false, old: false };
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas-overlay");
@@ -71,11 +68,6 @@ const loadingBar = document.getElementById("loading-bar");
 const loadingMsg = document.getElementById("loading-msg");
 const terminal = document.getElementById("terminal-log");
 const errorToast = document.getElementById("error-toast");
-const navToggle = document.getElementById("nav-toggle");
-const togglePill = document.getElementById("toggle-pill");
-const labelViejo = document.getElementById("label-viejo");
-const labelNuevo = document.getElementById("label-nuevo");
-const fabSwitch = document.getElementById("fab-switch");
 const modelBadge = document.getElementById("model-badge");
 const activeModelName = document.getElementById("active-model-name");
 const activeModelSub = document.getElementById("active-model-sub");
@@ -161,37 +153,14 @@ function updateMetrics(fps, inferenceMs, kpCount) {
 }
 
 function refreshModelInfo() {
-  if (activeModel === "new") {
-    modelBadge.textContent = "🆕 MoveNet · Lightning";
-    activeModelName.textContent = "MoveNet Lightning";
-    activeModelSub.textContent = "Pose Detection · 2021";
-    activeModelDesc.innerHTML =
-      "Regresión directa de 17 keypoints.<br>" +
-      "Backbone MobileNetV2 + FPN.<br>" +
-      "Súper rápido y liviano (~2 MB).<br>" +
-      "Optimizado para fluidez en WebGL.<br>" +
-      "🐱 Filtro neko activo.";
-  } else {
-    modelBadge.textContent = "🕰 PoseNet";
-    activeModelName.textContent = "PoseNet Clásico";
-    activeModelSub.textContent = "Pose Detection · 2018";
-    activeModelDesc.innerHTML =
-      "El modelo clásico predecesor.<br>" +
-      "Backbone MobileNetV1.<br>" +
-      "Menos preciso en movimientos rápidos.<br>" +
-      "Mayor latencia por frame.<br>" +
-      "🐱 Filtro neko activo.";
-  }
-
-  if (activeModel === "new") {
-    togglePill.classList.add("right");
-    labelViejo.classList.replace("active", "inactive");
-    labelNuevo.classList.replace("inactive", "active");
-  } else {
-    togglePill.classList.remove("right");
-    labelNuevo.classList.replace("active", "inactive");
-    labelViejo.classList.replace("inactive", "active");
-  }
+  modelBadge.textContent = "🆕 MoveNet · Lightning";
+  activeModelName.textContent = "MoveNet Lightning";
+  activeModelSub.textContent = "Pose Detection · 2021";
+  activeModelDesc.innerHTML =
+    "Regresión directa de 17 keypoints.<br>" +
+    "Backbone MobileNetV2 + FPN.<br>" +
+    "Súper rápido y liviano (~2 MB).<br>" +
+    "Optimizado para fluidez en WebGL.";
 }
 
 async function startCamera() {
@@ -216,11 +185,11 @@ async function startCamera() {
   }
 }
 
-// ─── CARGADORES DE MODELOS ──────────────────────────────────────────────
+// ─── CARGADOR DE MODELO ──────────────────────────────────────────────
 
 async function loadMoveNet() {
-  log("Cargando MoveNet Lightning (Nuevo)...");
-  setLoadingProgress(30, "Descargando MoveNet (~2MB)...");
+  log("Cargando MoveNet Lightning...");
+  setLoadingProgress(40, "Descargando MoveNet (~2MB)...");
   try {
     moveNetDetector = await poseDetection.createDetector(
       poseDetection.SupportedModels.MoveNet,
@@ -229,7 +198,6 @@ async function loadMoveNet() {
         enableSmoothing: true,
       },
     );
-    modelsReady.new = true;
     log("MoveNet listo ✓", "ok");
     return true;
   } catch (err) {
@@ -238,35 +206,9 @@ async function loadMoveNet() {
   }
 }
 
-async function loadPoseNet() {
-  log("Cargando PoseNet (Viejo)...");
-  setLoadingProgress(55, "Descargando PoseNet...");
-  try {
-    // Cargamos PoseNet usando la misma API genérica de detección
-    poseNetDetector = await poseDetection.createDetector(
-      poseDetection.SupportedModels.PoseNet,
-      {
-        architecture: "MobileNetV1",
-        outputStride: 16,
-        multiplier: 0.75,
-        // FIX: PoseNet procesa internamente a resolución reducida y NO reescala
-        // automáticamente las coordenadas al tamaño del canvas (a diferencia de MoveNet).
-        // Sin esto, los keypoints caen todos en ~0-225px (esquina sup-izq) y son invisibles.
-        inputResolution: { width: 640, height: 480 },
-      },
-    );
-    modelsReady.old = true;
-    log("PoseNet listo ✓", "ok");
-    return true;
-  } catch (err) {
-    log(`Error PoseNet: ${err.message}`, "warn");
-    return false;
-  }
-}
+// ─── DIBUJO ──────────────────────────────────────────────────────────
 
-// ─── DIBUJO UNIVERSAL (Sirve para ambos modelos) ─────────────────────────
-
-function drawSkeletonAndFilter(keypoints, threshold = 0.3) {
+function drawSkeleton(keypoints, threshold = 0.3) {
   if (!keypoints || keypoints.length === 0) return;
   const W = canvas.width;
   const kp = keypoints.map((k) => ({ ...k, x: W - k.x }));
@@ -291,7 +233,7 @@ function drawSkeletonAndFilter(keypoints, threshold = 0.3) {
     ctx.shadowBlur = 0;
   });
 
-  kp.forEach((k, idx) => {
+  kp.forEach((k) => {
     if ((k.score ?? 0) < threshold) return;
     ctx.beginPath();
     ctx.arc(k.x, k.y, 5, 0, 2 * Math.PI);
@@ -301,91 +243,6 @@ function drawSkeletonAndFilter(keypoints, threshold = 0.3) {
     ctx.fill();
     ctx.shadowBlur = 0;
   });
-
-  drawCatFilter(kp);
-}
-
-function drawCatFilter(kp) {
-  const nose = kp[0];
-  const leftEye = kp[1];
-  const rightEye = kp[2];
-
-  if ((nose?.score ?? 0) < 0.3) return;
-  if ((leftEye?.score ?? 0) < 0.3 || (rightEye?.score ?? 0) < 0.3) return;
-
-  const eyeDist = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
-  const scale = eyeDist * 1.1;
-  const midX = (leftEye.x + rightEye.x) / 2;
-  const midY = (leftEye.y + rightEye.y) / 2;
-  const angle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
-
-  ctx.save();
-  ctx.translate(midX, midY - scale * 0.6);
-  ctx.rotate(angle);
-
-  function drawEar(offsetX, flip = 1) {
-    ctx.save();
-    ctx.translate(offsetX, 0);
-    ctx.beginPath();
-    const h = scale * 0.65;
-    const w = scale * 0.5;
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-w * 0.5 * flip, -h);
-    ctx.lineTo(w * 0.5 * flip, -h);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(255,45,120,0.35)";
-    ctx.strokeStyle = "#ff2d78";
-    ctx.lineWidth = 2;
-    ctx.shadowColor = "#ff2d78";
-    ctx.shadowBlur = 14;
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, -h * 0.15);
-    ctx.lineTo(-w * 0.28 * flip, -h * 0.82);
-    ctx.lineTo(w * 0.28 * flip, -h * 0.82);
-    ctx.closePath();
-    ctx.fillStyle = "rgba(224,64,251,0.45)";
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.restore();
-  }
-
-  drawEar(-scale * 0.75, -1);
-  drawEar(scale * 0.75, 1);
-  ctx.restore();
-
-  if ((nose.score ?? 0) > 0.4) {
-    ctx.save();
-    ctx.translate(nose.x, nose.y);
-    ctx.rotate(angle);
-
-    const whiskerLen = scale * 0.85;
-    const whiskerY = scale * 0.12;
-
-    ctx.strokeStyle = "rgba(255,45,120,0.85)";
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = "#ff2d78";
-    ctx.shadowBlur = 8;
-
-    [-0.1, 0, 0.1].forEach((yOff, i) => {
-      const spread = (i - 1) * scale * 0.12;
-      ctx.beginPath();
-      ctx.moveTo(0, whiskerY + spread);
-      ctx.lineTo(-whiskerLen, whiskerY + spread - scale * 0.08 * (i - 1));
-      ctx.stroke();
-    });
-    [-0.1, 0, 0.1].forEach((yOff, i) => {
-      const spread = (i - 1) * scale * 0.12;
-      ctx.beginPath();
-      ctx.moveTo(0, whiskerY + spread);
-      ctx.lineTo(whiskerLen, whiskerY + spread - scale * 0.08 * (i - 1));
-      ctx.stroke();
-    });
-
-    ctx.shadowBlur = 0;
-    ctx.restore();
-  }
 }
 
 // ─── LOOP PRINCIPAL ───────────────────────────────────────────────────
@@ -404,25 +261,18 @@ async function runLoop() {
   let inferenceKeypoints = null;
 
   try {
-    // Definimos qué detector usar basándonos en el switch de la UI
-    const detector = activeModel === "new" ? moveNetDetector : poseNetDetector;
-
-    if (detector) {
-      const poses = await detector.estimatePoses(video, {
+    if (moveNetDetector) {
+      const poses = await moveNetDetector.estimatePoses(video, {
         maxPoses: 1,
         flipHorizontal: false,
-        // FIX: PoseNet necesita scoreThreshold más bajo que MoveNet (0.3 filtraba todo)
-        scoreThreshold: activeModel === "new" ? 0.3 : 0.1,
+        scoreThreshold: 0.3,
       });
 
       if (poses.length > 0) {
         const { keypoints } = poses[0];
         inferenceKeypoints = keypoints;
-        const drawThreshold = activeModel === "new" ? 0.3 : 0.15;
-        drawSkeletonAndFilter(keypoints, drawThreshold);
-        kpCount = keypoints.filter(
-          (k) => (k.score ?? 0) > drawThreshold,
-        ).length;
+        drawSkeleton(keypoints, 0.3);
+        kpCount = keypoints.filter((k) => (k.score ?? 0) > 0.3).length;
       }
     }
   } catch (err) {
@@ -456,19 +306,13 @@ async function runLoop() {
   animFrameId = requestAnimationFrame(runLoop);
 }
 
-function switchModel() {
-  window.location.href = "posenet.html";
-}
-
 async function init() {
   log("Inicializando TensorFlow.js...");
-  setLoadingProgress(5, "Configurando backend WebGL...");
+  setLoadingProgress(10, "Configurando backend WebGL...");
 
   await tf.setBackend("webgl");
   await tf.ready();
-  const backend = tf.getBackend();
-  log(`Backend activo: ${backend}`, "ok");
-  setLoadingProgress(15, `Backend: ${backend} ✓`);
+  log(`Backend activo: ${tf.getBackend()}`, "ok");
 
   setLoadingProgress(20, "Solicitando acceso a la cámara...");
   const camOk = await startCamera();
@@ -477,39 +321,22 @@ async function init() {
       "⚠ Sin acceso a la cámara. Recarga y acepta el permiso.";
     return;
   }
-  setLoadingProgress(25, "Cámara lista ✓");
 
   buildKpList();
 
   const moveNetOk = await loadMoveNet();
-  setLoadingProgress(55, "MoveNet listo ✓");
+  setLoadingProgress(100, "Iniciando...");
 
   if (moveNetOk) {
-    activeModel = "new";
     refreshModelInfo();
     isRunning = true;
     runLoop();
     hideLoading();
     log("Sistema activo. Ejecutando MoveNet.", "ok");
+  } else {
+    log("MoveNet falló.", "warn");
   }
-
-  setLoadingProgress(65, "Cargando PoseNet en segundo plano...");
-  loadPoseNet().then((ok) => {
-    if (ok) log("PoseNet disponible. Puedes cambiar de modelo.", "ok");
-    if (!moveNetOk && ok) {
-      activeModel = "old";
-      refreshModelInfo();
-      isRunning = true;
-      runLoop();
-      hideLoading();
-    }
-  });
-
-  if (!moveNetOk) log("MoveNet falló. Esperando PoseNet...", "warn");
 }
-
-navToggle.addEventListener("click", switchModel);
-fabSwitch.addEventListener("click", switchModel);
 
 init().catch((err) => {
   console.error("Error fatal en init():", err);
