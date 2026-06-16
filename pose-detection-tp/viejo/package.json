@@ -1,0 +1,11 @@
+{
+  "name": "pose-detection-viejo",
+  "version": "1.0.0",
+  "description": "Detección de pose simple que no te hará llorar",
+  "scripts": {
+    "start": "serve ."
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}
