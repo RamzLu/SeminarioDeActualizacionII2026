@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='public', static_folder='public', static_url_path='/')
 
 @app.route('/')
 def index():
